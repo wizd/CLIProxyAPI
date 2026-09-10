@@ -53,6 +53,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Make GHCR package public
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -fsS -X PATCH \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/cliproxyapi" \
+            -d '{"visibility":"public"}' \
+            || curl -fsS -X PATCH \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/wizd/CLIProxyAPI/packages/container/cliproxyapi" \
+              -d '{"visibility":"public"}' \
+            || true
+
       - name: Trigger Coolify redeploy
         continue-on-error: true
         env:
