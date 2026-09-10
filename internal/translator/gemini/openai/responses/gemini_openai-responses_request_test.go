@@ -2283,3 +2283,49 @@ func TestConvertOpenAIResponsesRequestToGemini_AllPendingCallsReservedByFutureEx
 		}
 	}
 }
+
+func TestConvertOpenAIResponsesRequestToGeminiPreservesInputVideo(t *testing.T) {
+	inputJSON := `{
+		"model": "gemini-3-flash",
+		"input": [
+			{
+				"role": "user",
+				"content": [
+					{"type": "input_video", "video_url": "data:video/mp4;base64,AAAAIGZ0eXBtcDQy"},
+					{"type": "input_text", "text": "Describe the video"}
+				]
+			}
+		]
+	}`
+
+	output := ConvertOpenAIResponsesRequestToGemini("gemini-3-flash", []byte(inputJSON), false)
+	parts := gjson.GetBytes(output, "contents.0.parts").Array()
+	if len(parts) != 2 {
+		t.Fatalf("parts length = %d, want 2. parts=%s", len(parts), gjson.GetBytes(output, "contents.0.parts").Raw)
+	}
+	if got := parts[0].Get("inline_data.mime_type").String(); got != "video/mp4" {
+		t.Fatalf("mime_type = %q, part=%s", got, parts[0].Raw)
+	}
+	if got := parts[0].Get("inline_data.data").String(); got != "AAAAIGZ0eXBtcDQy" {
+		t.Fatalf("data = %q", got)
+	}
+}
+
+func TestConvertOpenAIResponsesRequestToGeminiPreservesYouTubeInputVideo(t *testing.T) {
+	inputJSON := `{
+		"model": "gemini-3-flash",
+		"input": [
+			{
+				"role": "user",
+				"content": [
+					{"type": "input_video", "video_url": {"url": "https://www.youtube.com/watch?v=jNQXAC9IVRw"}}
+				]
+			}
+		]
+	}`
+
+	output := ConvertOpenAIResponsesRequestToGemini("gemini-3-flash", []byte(inputJSON), false)
+	if got := gjson.GetBytes(output, "contents.0.parts.0.file_data.file_uri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
+		t.Fatalf("file_uri = %q. output=%s", got, output)
+	}
+}

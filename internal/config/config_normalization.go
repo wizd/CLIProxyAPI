@@ -390,3 +390,37 @@ func NormalizeOAuthExcludedModels(entries map[string][]string) map[string][]stri
 	}
 	return out
 }
+
+// SanitizeVideoConfig trims host allowlists and drops empty entries.
+func (cfg *Config) SanitizeVideoConfig() {
+	if cfg == nil {
+		return
+	}
+	if cfg.Video.MaxRequestBodyMB < 0 {
+		cfg.Video.MaxRequestBodyMB = 0
+	}
+	if cfg.Video.MaxLargePayloadConcurrency < 0 {
+		cfg.Video.MaxLargePayloadConcurrency = 0
+	}
+	if cfg.Video.FetchMaxBytesMB < 0 {
+		cfg.Video.FetchMaxBytesMB = 0
+	}
+	cfg.Video.FetchTimeout = strings.TrimSpace(cfg.Video.FetchTimeout)
+	if len(cfg.Video.FetchAllowedHosts) == 0 {
+		return
+	}
+	hosts := make([]string, 0, len(cfg.Video.FetchAllowedHosts))
+	seen := make(map[string]struct{}, len(cfg.Video.FetchAllowedHosts))
+	for _, host := range cfg.Video.FetchAllowedHosts {
+		host = strings.ToLower(strings.TrimSpace(host))
+		if host == "" {
+			continue
+		}
+		if _, exists := seen[host]; exists {
+			continue
+		}
+		seen[host] = struct{}{}
+		hosts = append(hosts, host)
+	}
+	cfg.Video.FetchAllowedHosts = hosts
+}

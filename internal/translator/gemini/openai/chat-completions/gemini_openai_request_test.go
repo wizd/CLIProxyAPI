@@ -91,6 +91,60 @@ func TestConvertOpenAIRequestToGeminiPreservesVideoURL(t *testing.T) {
 	}
 }
 
+func TestConvertOpenAIRequestToGeminiPreservesYouTubeVideoURL(t *testing.T) {
+	inputJSON := `{
+		"model": "gemini-3-flash",
+		"messages": [
+			{
+				"role": "user",
+				"content": [
+					{"type": "video_url", "video_url": {"url": "https://www.youtube.com/watch?v=jNQXAC9IVRw", "start_offset": 5, "end_offset": 15, "fps": 1}},
+					{"type": "text", "text": "Describe the video"}
+				]
+			}
+		]
+	}`
+
+	result := ConvertOpenAIRequestToGemini("gemini-3-flash", []byte(inputJSON), false)
+	parts := gjson.ParseBytes(result).Get("contents.0.parts").Array()
+	if len(parts) != 2 {
+		t.Fatalf("parts length = %d, want 2. parts=%s", len(parts), gjson.GetBytes(result, "contents.0.parts").Raw)
+	}
+	if got := parts[0].Get("fileData.file_uri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
+		t.Fatalf("file_uri = %q", got)
+	}
+	if got := parts[0].Get("videoMetadata.startOffset.seconds").Int(); got != 5 {
+		t.Fatalf("startOffset = %d", got)
+	}
+}
+
+func TestConvertOpenAIRequestToGeminiPreservesAssistantVideoURL(t *testing.T) {
+	inputJSON := `{
+		"model": "gemini-3-flash",
+		"messages": [
+			{"role": "user", "content": "watch this"},
+			{"role": "assistant", "content": [
+				{"type": "video_url", "video_url": {"url": "data:video/mp4;base64,AAAAIGZ0eXBtcDQy"}},
+				{"type": "text", "text": "a clip"}
+			]},
+			{"role": "user", "content": "again"}
+		]
+	}`
+
+	result := ConvertOpenAIRequestToGemini("gemini-3-flash", []byte(inputJSON), false)
+	contents := gjson.ParseBytes(result).Get("contents").Array()
+	if len(contents) < 2 {
+		t.Fatalf("contents length = %d, want at least 2. raw=%s", len(contents), result)
+	}
+	parts := contents[1].Get("parts").Array()
+	if len(parts) != 2 {
+		t.Fatalf("assistant parts length = %d, want 2. parts=%s", len(parts), contents[1].Get("parts").Raw)
+	}
+	if got := parts[0].Get("inlineData.mime_type").String(); got != "video/mp4" {
+		t.Fatalf("assistant video mime = %q", got)
+	}
+}
+
 func TestConvertOpenAIRequestToGeminiSkipsEmptyTextPartsWithoutNulls(t *testing.T) {
 	inputJSON := `{
 		"model": "gemini-3-flash",

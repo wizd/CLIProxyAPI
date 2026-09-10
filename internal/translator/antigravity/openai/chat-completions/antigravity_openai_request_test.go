@@ -499,6 +499,47 @@ func TestConvertOpenAIRequestToAntigravityTranslatesVideoURL(t *testing.T) {
 	}
 }
 
+func TestConvertOpenAIRequestToAntigravityTranslatesYouTubeVideoURL(t *testing.T) {
+	inputJSON := []byte(`{
+		"model": "gemini-3.7-flash-high",
+		"messages": [{
+			"role": "user",
+			"content": [
+				{"type": "video_url", "video_url": {"url": "https://youtu.be/jNQXAC9IVRw"}},
+				{"type": "text", "text": "What is this?"}
+			]
+		}]
+	}`)
+
+	out := ConvertOpenAIRequestToAntigravity("gemini-3.7-flash-high", inputJSON, false)
+	fileURI := gjson.GetBytes(out, "request.contents.0.parts.0.fileData.fileUri").String()
+	if fileURI != "https://youtu.be/jNQXAC9IVRw" {
+		t.Fatalf("fileUri = %q. Output: %s", fileURI, out)
+	}
+}
+
+func TestConvertOpenAIRequestToAntigravityTranslatesAssistantVideoURL(t *testing.T) {
+	inputJSON := []byte(`{
+		"model": "gemini-3.7-flash-high",
+		"messages": [
+			{"role": "user", "content": "watch"},
+			{"role": "assistant", "content": [
+				{"type": "video_url", "video_url": {"url": "data:video/mp4;base64,AAAAIGZ0eXBtcDQy"}}
+			]},
+			{"role": "user", "content": "again"}
+		]
+	}`)
+
+	out := ConvertOpenAIRequestToAntigravity("gemini-3.7-flash-high", inputJSON, false)
+	contents := gjson.GetBytes(out, "request.contents").Array()
+	if len(contents) < 2 {
+		t.Fatalf("contents length = %d. Output: %s", len(contents), out)
+	}
+	if got := contents[1].Get("parts.0.inlineData.mimeType").String(); got != "video/mp4" {
+		t.Fatalf("assistant mimeType = %q. Output: %s", got, out)
+	}
+}
+
 func TestConvertOpenAIRequestToAntigravity_MaxCompletionTokens(t *testing.T) {
 	tests := []struct {
 		name     string

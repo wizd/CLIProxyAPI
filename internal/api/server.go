@@ -103,6 +103,9 @@ type Server struct {
 
 	exampleAPIKeySafeModeEnabled bool
 	exampleAPIKeySafeModeActive  atomic.Bool
+
+	largePayloadMu    sync.Mutex
+	largePayloadSlots chan struct{}
 }
 
 // NewServer creates and initializes a new API server instance.
@@ -183,6 +186,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 
 		exampleAPIKeySafeModeEnabled: optionState.exampleAPIKeySafeMode,
 	}
+	s.refreshLargePayloadSlots(cfg.Video.LargePayloadConcurrency())
 	s.wsAuthEnabled.Store(cfg.WebsocketAuth)
 	s.exampleAPIKeySafeModeActive.Store(s.exampleAPIKeySafeModeRequired(cfg))
 	s.handlers.SetPluginHost(optionState.pluginHost)

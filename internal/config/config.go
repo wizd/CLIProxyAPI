@@ -171,4 +171,7 @@ type Config struct {
 
 	// Payload defines default and override rules for provider payload parameters.
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
+
+	// Video configures inbound video size limits and optional remote URL fetching.
+	Video VideoConfig `yaml:"video" json:"video"`
 }

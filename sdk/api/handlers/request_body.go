@@ -3,13 +3,39 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/klauspost/compress/zstd"
 )
+
+// IsRequestBodyTooLarge reports whether err is an http.MaxBytesError.
+func IsRequestBodyTooLarge(err error) bool {
+	var maxBytes *http.MaxBytesError
+	return errors.As(err, &maxBytes)
+}
+
+// WriteRequestBodyError writes 413 when the body exceeded the configured cap.
+func WriteRequestBodyError(c *gin.Context, err error) bool {
+	if err == nil || c == nil {
+		return false
+	}
+	if !IsRequestBodyTooLarge(err) {
+		return false
+	}
+	c.JSON(http.StatusRequestEntityTooLarge, ErrorResponse{
+		Error: ErrorDetail{
+			Message: "Request body too large",
+			Type:    "invalid_request_error",
+			Code:    "request_body_too_large",
+		},
+	})
+	return true
+}
 
 // ReadRequestBody reads the incoming request body and decodes supported
 // Content-Encoding values before handlers inspect JSON fields.

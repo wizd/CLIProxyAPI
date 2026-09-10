@@ -11,6 +11,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/safemode"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
+	handlers "github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,6 +37,80 @@ const (
 	exampleAPIKeyManagementPath = "/management.html"
 	exampleAPIKeyManagementURL  = "/management.html?safe-mode=configure"
 )
+
+func (s *Server) refreshLargePayloadSlots(n int64) {
+	if s == nil {
+		return
+	}
+	if n <= 0 {
+		n = config.DefaultVideoMaxLargePayloadConcurrency
+	}
+	s.largePayloadMu.Lock()
+	s.largePayloadSlots = make(chan struct{}, n)
+	s.largePayloadMu.Unlock()
+}
+
+func (s *Server) currentLargePayloadSlots() chan struct{} {
+	if s == nil {
+		return nil
+	}
+	s.largePayloadMu.Lock()
+	defer s.largePayloadMu.Unlock()
+	return s.largePayloadSlots
+}
+
+func writeRequestTooLarge(c *gin.Context) {
+	c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, handlers.ErrorResponse{
+		Error: handlers.ErrorDetail{
+			Message: "Request body too large",
+			Type:    "invalid_request_error",
+			Code:    "request_body_too_large",
+		},
+	})
+}
+
+func (s *Server) requestGuardMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c == nil || c.Request == nil {
+			c.Next()
+			return
+		}
+		switch c.Request.Method {
+		case http.MethodPost, http.MethodPut, http.MethodPatch:
+		default:
+			c.Next()
+			return
+		}
+
+		video := config.VideoConfig{}
+		if s != nil && s.cfg != nil {
+			video = s.cfg.Video
+		}
+		maxBytes := video.MaxRequestBodyBytes()
+		if c.Request.ContentLength > maxBytes {
+			writeRequestTooLarge(c)
+			return
+		}
+
+		if c.Request.ContentLength >= config.DefaultVideoLargePayloadThreshold {
+			slots := s.currentLargePayloadSlots()
+			if slots != nil {
+				select {
+				case slots <- struct{}{}:
+					defer func() { <-slots }()
+				case <-c.Request.Context().Done():
+					c.AbortWithStatus(http.StatusRequestTimeout)
+					return
+				}
+			}
+		}
+
+		if c.Request.Body != nil {
+			c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+		}
+		c.Next()
+	}
+}
 
 func (s *Server) homeHeartbeatMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

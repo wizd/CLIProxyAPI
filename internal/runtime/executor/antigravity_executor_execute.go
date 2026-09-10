@@ -84,6 +84,10 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 		reporter.UpdateAccessTokenFingerprint(auth)
 	}
 	originalTranslated, translated := helps.TranslateRequestPairWithCodexMultiAgentV2(ctx, opts.Headers, e.cfg, from, to, baseModel, originalPayload, req.Payload, false)
+	translated, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, translated)
+	if err != nil {
+		return resp, statusErr{code: http.StatusBadRequest, msg: err.Error()}
+	}
 
 	translated, err = helps.ApplyRequestThinking(translated, req, opts, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -288,6 +292,10 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 		reporter.UpdateAccessTokenFingerprint(auth)
 	}
 	originalTranslated, translated := helps.TranslateRequestPairWithCodexMultiAgentV2(ctx, opts.Headers, e.cfg, from, to, baseModel, originalPayload, req.Payload, true)
+	translated, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, translated)
+	if err != nil {
+		return resp, statusErr{code: http.StatusBadRequest, msg: err.Error()}
+	}
 
 	translated, err = helps.ApplyRequestThinking(translated, req, opts, from.String(), to.String(), e.Identifier())
 	if err != nil {

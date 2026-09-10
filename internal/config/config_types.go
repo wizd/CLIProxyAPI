@@ -137,6 +137,61 @@ type XAIConfig struct {
 	InjectXSearch bool `yaml:"inject-x-search" json:"inject-x-search"`
 }
 
+// VideoConfig configures inbound video payload limits and remote URL fetching.
+type VideoConfig struct {
+	// MaxRequestBodyMB is the maximum accepted request body size in megabytes.
+	// Zero uses the default of 48.
+	MaxRequestBodyMB int `yaml:"max-request-body-mb" json:"max-request-body-mb"`
+	// MaxLargePayloadConcurrency limits concurrent requests whose Content-Length
+	// exceeds 4 MiB. Zero uses the default of 2.
+	MaxLargePayloadConcurrency int `yaml:"max-large-payload-concurrency" json:"max-large-payload-concurrency"`
+	// FetchRemoteURLs downloads non-YouTube http(s) video URLs and inlines them.
+	// Default false. YouTube URLs are always passed through as fileData.
+	FetchRemoteURLs bool `yaml:"fetch-remote-urls" json:"fetch-remote-urls"`
+	// FetchMaxBytesMB is the maximum downloaded video size in megabytes.
+	// Zero uses the default of 40.
+	FetchMaxBytesMB int `yaml:"fetch-max-bytes-mb" json:"fetch-max-bytes-mb"`
+	// FetchTimeout is the download timeout, for example "30s". Empty uses 30s.
+	FetchTimeout string `yaml:"fetch-timeout" json:"fetch-timeout"`
+	// FetchAllowedHosts, when non-empty, restricts remote fetches to these hosts.
+	FetchAllowedHosts []string `yaml:"fetch-allowed-hosts,omitempty" json:"fetch-allowed-hosts,omitempty"`
+}
+
+const (
+	DefaultVideoMaxRequestBodyMB           = 48
+	DefaultVideoMaxLargePayloadConcurrency = 2
+	DefaultVideoFetchMaxBytesMB            = 40
+	DefaultVideoFetchTimeout               = "30s"
+	DefaultVideoLargePayloadThreshold      = 4 << 20
+)
+
+// MaxRequestBodyBytes returns the inbound body cap.
+func (c VideoConfig) MaxRequestBodyBytes() int64 {
+	mb := c.MaxRequestBodyMB
+	if mb <= 0 {
+		mb = DefaultVideoMaxRequestBodyMB
+	}
+	return int64(mb) << 20
+}
+
+// LargePayloadConcurrency returns the large-payload semaphore size.
+func (c VideoConfig) LargePayloadConcurrency() int64 {
+	n := int64(c.MaxLargePayloadConcurrency)
+	if n <= 0 {
+		return DefaultVideoMaxLargePayloadConcurrency
+	}
+	return n
+}
+
+// FetchLimitBytes returns the remote download size cap.
+func (c VideoConfig) FetchLimitBytes() int64 {
+	mb := c.FetchMaxBytesMB
+	if mb <= 0 {
+		mb = DefaultVideoFetchMaxBytesMB
+	}
+	return int64(mb) << 20
+}
+
 // AntigravityConfig configures provider-wide Antigravity request behavior.
 type AntigravityConfig struct {
 	// SensitiveWords is a list of words to obfuscate with zero-width characters in system instructions.

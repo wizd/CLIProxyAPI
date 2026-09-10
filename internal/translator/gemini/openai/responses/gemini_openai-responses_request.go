@@ -242,6 +242,8 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 								partJSON, _ = sjson.SetBytes(partJSON, "inline_data.mime_type", mimeType)
 								partJSON, _ = sjson.SetBytes(partJSON, "inline_data.data", audioData)
 							}
+						case "input_video", "video_url", "video":
+							partJSON = translatorcommon.VideoPartFromOpenAIItem(contentItem, translatorcommon.VideoPartResponses)
 						}
 
 						if len(partJSON) > 0 {
@@ -825,6 +827,14 @@ func openAIResponsesImageFromBlock(block gjson.Result) (mimeType string, data st
 			if mimeType == "" {
 				mimeType = "image/png"
 			}
+			if data != "" {
+				return mimeType, data, true
+			}
+		}
+	case "input_video", "video_url", "video":
+		videoURL := translatorcommon.OpenAIVideoURL(block)
+		if videoURL != "" {
+			mimeType, data = parseOpenAIResponsesDataURL(videoURL)
 			if data != "" {
 				return mimeType, data, true
 			}

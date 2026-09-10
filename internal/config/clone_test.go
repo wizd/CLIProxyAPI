@@ -15,6 +15,31 @@ func TestCloneForRuntimeNil(t *testing.T) {
 	}
 }
 
+func TestParseConfigBytes_VideoConfig(t *testing.T) {
+	cfg, errParse := ParseConfigBytes([]byte(`video:
+  max-request-body-mb: 32
+  fetch-remote-urls: true
+  fetch-allowed-hosts:
+    - "cdn.example.com"
+    - "CDN.example.com"
+`))
+	if errParse != nil {
+		t.Fatalf("ParseConfigBytes() error = %v", errParse)
+	}
+	if cfg.Video.MaxRequestBodyMB != 32 {
+		t.Fatalf("MaxRequestBodyMB = %d, want 32", cfg.Video.MaxRequestBodyMB)
+	}
+	if !cfg.Video.FetchRemoteURLs {
+		t.Fatal("FetchRemoteURLs = false, want true")
+	}
+	if got := cfg.Video.MaxRequestBodyBytes(); got != 32<<20 {
+		t.Fatalf("MaxRequestBodyBytes = %d", got)
+	}
+	if !reflect.DeepEqual(cfg.Video.FetchAllowedHosts, []string{"cdn.example.com"}) {
+		t.Fatalf("FetchAllowedHosts = %#v", cfg.Video.FetchAllowedHosts)
+	}
+}
+
 func TestParseConfigBytes_AntigravitySensitiveWords(t *testing.T) {
 	cfg, errParse := ParseConfigBytes([]byte(`antigravity:
   sensitive-words:
