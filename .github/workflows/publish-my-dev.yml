@@ -83,4 +83,4 @@ jobs:
           curl -fsS -X POST \
             -H "Authorization: Bearer ${COOLIFY_API_TOKEN}" \
             -H "Accept: application/json" \
-            "https://cloud-uni-19.vcorp.ai/api/v1/deploy?uuid=${COOLIFY_APP_UUID}&force=false"
+            "https://cloud-uni-19.vcorp.ai/api/v1/deploy?uuid=${COOLIFY_APP_UUID}&force=true"
