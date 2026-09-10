@@ -424,3 +424,18 @@ func (cfg *Config) SanitizeVideoConfig() {
 	}
 	cfg.Video.FetchAllowedHosts = hosts
 }
+
+// SanitizeFileStoreConfig trims paths and drops invalid numeric limits.
+func (cfg *Config) SanitizeFileStoreConfig() {
+	if cfg == nil {
+		return
+	}
+	cfg.FileStore.Dir = strings.TrimSpace(cfg.FileStore.Dir)
+	cfg.FileStore.TTL = strings.TrimSpace(cfg.FileStore.TTL)
+	if cfg.FileStore.MaxUploadMB < 0 {
+		cfg.FileStore.MaxUploadMB = 0
+	}
+	if cfg.FileStore.MaxTotalGB < 0 {
+		cfg.FileStore.MaxTotalGB = 0
+	}
+}

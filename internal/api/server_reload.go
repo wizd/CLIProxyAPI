@@ -169,6 +169,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	}
 	s.cfg = cfg
 	s.refreshLargePayloadSlots(cfg.Video.LargePayloadConcurrency())
+	s.ensureFileStore(cfg)
 	if s.codexLiveHandler != nil {
 		if errUpdate := s.codexLiveHandler.UpdateConfig(cfg); errUpdate != nil {
 			log.WithError(errUpdate).Error("failed to update Codex Live media relay configuration")

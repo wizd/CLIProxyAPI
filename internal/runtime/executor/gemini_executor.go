@@ -151,7 +151,11 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	originalPayload := originalPayloadSource
 	originalTranslated := helps.TranslateRequestWithAPIKeyModelCompatibility(ctx, opts.Headers, e.cfg, from, to, baseModel, originalPayload, false, helps.APIKeyModelIsCompat(req))
 	body := helps.TranslateRequestWithAPIKeyModelCompatibility(ctx, opts.Headers, e.cfg, from, to, baseModel, req.Payload, false, helps.APIKeyModelIsCompat(req))
-	body, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, body)
+	var releaseVideo func()
+	body, releaseVideo, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, body, opts.Metadata)
+	if releaseVideo != nil {
+		defer releaseVideo()
+	}
 	if err != nil {
 		return resp, statusErr{code: http.StatusBadRequest, msg: err.Error()}
 	}
@@ -276,7 +280,11 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	originalPayload := originalPayloadSource
 	originalTranslated := helps.TranslateRequestWithAPIKeyModelCompatibility(ctx, opts.Headers, e.cfg, from, to, baseModel, originalPayload, true, helps.APIKeyModelIsCompat(req))
 	body := helps.TranslateRequestWithAPIKeyModelCompatibility(ctx, opts.Headers, e.cfg, from, to, baseModel, req.Payload, true, helps.APIKeyModelIsCompat(req))
-	body, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, body)
+	var releaseVideo func()
+	body, releaseVideo, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, body, opts.Metadata)
+	if releaseVideo != nil {
+		defer releaseVideo()
+	}
 	if err != nil {
 		return nil, statusErr{code: http.StatusBadRequest, msg: err.Error()}
 	}
@@ -647,7 +655,10 @@ func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 	to := sdktranslator.FromString("gemini")
 	translatedReq := helps.TranslateRequestWithAPIKeyModelCompatibility(ctx, opts.Headers, e.cfg, from, to, baseModel, req.Payload, false, helps.APIKeyModelIsCompat(req))
-	translatedReq, err := helps.ResolveRemoteVideoURLs(ctx, e.cfg, translatedReq)
+	translatedReq, releaseVideo, err := helps.ResolveRemoteVideoURLs(ctx, e.cfg, translatedReq, opts.Metadata)
+	if releaseVideo != nil {
+		defer releaseVideo()
+	}
 	if err != nil {
 		return cliproxyexecutor.Response{}, statusErr{code: http.StatusBadRequest, msg: err.Error()}
 	}

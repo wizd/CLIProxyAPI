@@ -108,6 +108,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	cfg.SanitizeOAuthRequestScopedErrors()
 	cfg.SanitizePayloadRules()
 	cfg.SanitizeVideoConfig()
+	cfg.SanitizeFileStoreConfig()
 
 	return &cfg, nil
 }

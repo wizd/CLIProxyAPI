@@ -81,8 +81,41 @@ func IsRemoteHTTPURL(raw string) bool {
 	return (scheme == "http" || scheme == "https") && parsed.Host != ""
 }
 
+const gatewayFileURIScheme = "gwfile://"
+
+// IsGatewayFileURI reports whether raw is a gateway-local file handle.
+func IsGatewayFileURI(raw string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(raw)), gatewayFileURIScheme)
+}
+
+// GatewayFileURI builds a gwfile:// handle from a file id.
+func GatewayFileURI(fileID string) string {
+	fileID = strings.TrimSpace(fileID)
+	if fileID == "" {
+		return ""
+	}
+	return gatewayFileURIScheme + fileID
+}
+
+// GatewayFileID extracts the file id from a gwfile:// URI.
+func GatewayFileID(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if !IsGatewayFileURI(raw) {
+		return "", false
+	}
+	id := strings.TrimPrefix(raw[len(gatewayFileURIScheme):], "/")
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "", false
+	}
+	return id, true
+}
+
 // OpenAIVideoURL extracts a video URL from an OpenAI content part.
 func OpenAIVideoURL(item gjson.Result) string {
+	if fileID := firstFileID(item); fileID != "" {
+		return GatewayFileURI(fileID)
+	}
 	if url := strings.TrimSpace(item.Get("video_url.url").String()); url != "" {
 		return url
 	}
@@ -93,6 +126,21 @@ func OpenAIVideoURL(item gjson.Result) string {
 	}
 	if url := strings.TrimSpace(item.Get("url").String()); url != "" {
 		return url
+	}
+	return ""
+}
+
+func firstFileID(item gjson.Result) string {
+	for _, pathName := range []string{"file_id", "video_url.file_id", "fileId"} {
+		if id := strings.TrimSpace(item.Get(pathName).String()); id != "" {
+			if IsGatewayFileURI(id) {
+				if extracted, ok := GatewayFileID(id); ok {
+					return extracted
+				}
+				continue
+			}
+			return id
+		}
 	}
 	return ""
 }
@@ -116,6 +164,9 @@ func VideoPartFromURL(videoURL string, kind VideoPartKind) []byte {
 	}
 	if mimeType, data, ok := ParseDataURL(videoURL); ok {
 		return GeminiInlineDataPart(mimeType, data, kind)
+	}
+	if IsGatewayFileURI(videoURL) {
+		return GeminiFileDataPart(videoURL, "video/mp4", kind)
 	}
 	if IsRemoteHTTPURL(videoURL) {
 		mimeType := mimeFromVideoURL(videoURL)

@@ -83,7 +83,11 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	}
 
 	originalTranslated, translated := helps.TranslateRequestPairWithCodexMultiAgentV2(ctx, opts.Headers, e.cfg, from, to, baseModel, originalPayload, req.Payload, true)
-	translated, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, translated)
+	var releaseVideo func()
+	translated, releaseVideo, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, translated, opts.Metadata)
+	if releaseVideo != nil {
+		defer releaseVideo()
+	}
 	if err != nil {
 		return nil, statusErr{code: http.StatusBadRequest, msg: err.Error()}
 	}

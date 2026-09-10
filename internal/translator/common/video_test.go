@@ -59,6 +59,34 @@ func TestVideoPartFromOpenAIItemYouTube(t *testing.T) {
 	}
 }
 
+func TestVideoPartFromOpenAIItemFileID(t *testing.T) {
+	item := gjson.Parse(`{"type":"video_url","file_id":"file-0123456789abcdef","video_metadata":{"fps":1}}`)
+	part := VideoPartFromOpenAIItem(item, VideoPartGeminiCamel)
+	if got := gjson.GetBytes(part, "fileData.fileUri").String(); got != "gwfile://file-0123456789abcdef" {
+		t.Fatalf("fileUri = %q part=%s", got, part)
+	}
+	if got := gjson.GetBytes(part, "videoMetadata.fps").Int(); got != 1 {
+		t.Fatalf("fps = %v", gjson.GetBytes(part, "videoMetadata").Raw)
+	}
+}
+
+func TestVideoPartFromURLGatewayFile(t *testing.T) {
+	part := VideoPartFromURL("gwfile://file-abc12345", VideoPartResponses)
+	if got := gjson.GetBytes(part, "file_data.file_uri").String(); got != "gwfile://file-abc12345" {
+		t.Fatalf("file_uri = %q", got)
+	}
+}
+
+func TestGatewayFileID(t *testing.T) {
+	id, ok := GatewayFileID("gwfile://file-abc")
+	if !ok || id != "file-abc" {
+		t.Fatalf("got %q %v", id, ok)
+	}
+	if IsGatewayFileURI("https://example.com/x") {
+		t.Fatal("http URL should not be a gateway file")
+	}
+}
+
 func TestVideoPartFromOpenAIItemResponsesYouTube(t *testing.T) {
 	item := gjson.Parse(`{"type":"input_video","video_url":"https://youtu.be/jNQXAC9IVRw"}`)
 	part := VideoPartFromOpenAIItem(item, VideoPartResponses)

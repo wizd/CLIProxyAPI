@@ -3,6 +3,7 @@ package config
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"gopkg.in/yaml.v3"
@@ -37,6 +38,33 @@ func TestParseConfigBytes_VideoConfig(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cfg.Video.FetchAllowedHosts, []string{"cdn.example.com"}) {
 		t.Fatalf("FetchAllowedHosts = %#v", cfg.Video.FetchAllowedHosts)
+	}
+}
+
+func TestParseConfigBytes_FileStoreConfig(t *testing.T) {
+	cfg, errParse := ParseConfigBytes([]byte(`file-store:
+  dir: "/data/uploads"
+  ttl: "24h"
+  max-upload-mb: 80
+  max-total-gb: 2
+`))
+	if errParse != nil {
+		t.Fatalf("ParseConfigBytes() error = %v", errParse)
+	}
+	if cfg.FileStore.Dir != "/data/uploads" {
+		t.Fatalf("Dir = %q", cfg.FileStore.Dir)
+	}
+	if cfg.FileStore.TTL != "24h" {
+		t.Fatalf("TTL = %q", cfg.FileStore.TTL)
+	}
+	if got := cfg.FileStore.MaxUploadBytes(); got != 80<<20 {
+		t.Fatalf("MaxUploadBytes = %d", got)
+	}
+	if got := cfg.FileStore.MaxTotalBytes(); got != 2<<30 {
+		t.Fatalf("MaxTotalBytes = %d", got)
+	}
+	if got := cfg.FileStore.TTLDuration(); got != 24*time.Hour {
+		t.Fatalf("TTLDuration = %s", got)
 	}
 }
 

@@ -174,4 +174,7 @@ type Config struct {
 
 	// Video configures inbound video size limits and optional remote URL fetching.
 	Video VideoConfig `yaml:"video" json:"video"`
+
+	// FileStore configures the gateway-local video file handle store.
+	FileStore FileStoreConfig `yaml:"file-store" json:"file-store"`
 }

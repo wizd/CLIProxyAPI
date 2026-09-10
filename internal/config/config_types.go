@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	sdkpluginstore "github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginstore"
@@ -190,6 +192,58 @@ func (c VideoConfig) FetchLimitBytes() int64 {
 		mb = DefaultVideoFetchMaxBytesMB
 	}
 	return int64(mb) << 20
+}
+
+// FileStoreConfig configures the gateway-local video file handle store.
+type FileStoreConfig struct {
+	// Dir is the directory for uploaded blobs and metadata sidecars.
+	// Empty uses <auth-dir>/uploads.
+	Dir string `yaml:"dir" json:"dir"`
+	// TTL is how long a handle remains valid, for example "48h". Empty uses 48h.
+	TTL string `yaml:"ttl" json:"ttl"`
+	// MaxUploadMB is the maximum size of a single upload in megabytes.
+	// Zero uses the default of 96.
+	MaxUploadMB int `yaml:"max-upload-mb" json:"max-upload-mb"`
+	// MaxTotalGB is the maximum total stored bytes across all callers.
+	// Zero uses the default of 4. Excess files are evicted oldest-first.
+	MaxTotalGB int `yaml:"max-total-gb" json:"max-total-gb"`
+}
+
+const (
+	DefaultFileStoreTTL         = "48h"
+	DefaultFileStoreMaxUploadMB = 96
+	DefaultFileStoreMaxTotalGB  = 4
+)
+
+// MaxUploadBytes returns the per-file upload cap.
+func (c FileStoreConfig) MaxUploadBytes() int64 {
+	mb := c.MaxUploadMB
+	if mb <= 0 {
+		mb = DefaultFileStoreMaxUploadMB
+	}
+	return int64(mb) << 20
+}
+
+// MaxTotalBytes returns the store-wide capacity.
+func (c FileStoreConfig) MaxTotalBytes() int64 {
+	gb := c.MaxTotalGB
+	if gb <= 0 {
+		gb = DefaultFileStoreMaxTotalGB
+	}
+	return int64(gb) << 30
+}
+
+// TTLDuration returns the handle lifetime.
+func (c FileStoreConfig) TTLDuration() time.Duration {
+	raw := strings.TrimSpace(c.TTL)
+	if raw == "" {
+		raw = DefaultFileStoreTTL
+	}
+	ttl, err := time.ParseDuration(raw)
+	if err != nil || ttl <= 0 {
+		ttl, _ = time.ParseDuration(DefaultFileStoreTTL)
+	}
+	return ttl
 }
 
 // AntigravityConfig configures provider-wide Antigravity request behavior.

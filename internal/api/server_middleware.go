@@ -10,6 +10,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/safemode"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/upload"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
 	handlers "github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	log "github.com/sirupsen/logrus"
@@ -42,6 +43,11 @@ func (s *Server) refreshLargePayloadSlots(n int64) {
 	if s == nil {
 		return
 	}
+	if s.payloadGate == nil {
+		s.payloadGate = &upload.SlotGate{}
+		upload.SetSlotGate(s.payloadGate)
+	}
+	s.payloadGate.Resize(n)
 	if n <= 0 {
 		n = config.DefaultVideoMaxLargePayloadConcurrency
 	}
@@ -83,18 +89,31 @@ func (s *Server) requestGuardMiddleware() gin.HandlerFunc {
 		}
 
 		video := config.VideoConfig{}
+		fileStore := config.FileStoreConfig{}
 		if s != nil && s.cfg != nil {
 			video = s.cfg.Video
+			fileStore = s.cfg.FileStore
 		}
 		maxBytes := video.MaxRequestBodyBytes()
+		if isFileUploadPath(c.Request.URL.Path) {
+			maxBytes = fileStore.MaxUploadBytes()
+		}
 		if c.Request.ContentLength > maxBytes {
 			writeRequestTooLarge(c)
 			return
 		}
 
 		if c.Request.ContentLength >= config.DefaultVideoLargePayloadThreshold {
-			slots := s.currentLargePayloadSlots()
-			if slots != nil {
+			if s != nil && s.payloadGate != nil {
+				release, errAcquire := s.payloadGate.Acquire(c.Request.Context())
+				if errAcquire != nil {
+					c.AbortWithStatus(http.StatusRequestTimeout)
+					return
+				}
+				if release != nil {
+					defer release()
+				}
+			} else if slots := s.currentLargePayloadSlots(); slots != nil {
 				select {
 				case slots <- struct{}{}:
 					defer func() { <-slots }()
