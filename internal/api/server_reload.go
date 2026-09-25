@@ -167,7 +167,9 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	if accessConfigApplied || exampleAPIKeySafeModeRequired {
 		s.exampleAPIKeySafeModeActive.Store(exampleAPIKeySafeModeRequired)
 	}
+	s.cfgMu.Lock()
 	s.cfg = cfg
+	s.cfgMu.Unlock()
 	s.refreshLargePayloadSlots(cfg.Video.LargePayloadConcurrency())
 	s.ensureFileStore(cfg)
 	if s.codexLiveHandler != nil {
