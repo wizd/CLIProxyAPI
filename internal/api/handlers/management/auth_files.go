@@ -456,6 +456,11 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagi
 					fileData["note"] = trimmed
 				}
 			}
+			if pv := gjson.GetBytes(data, "proxy_url"); pv.Exists() && pv.Type == gjson.String {
+				if trimmed := strings.TrimSpace(pv.String()); trimmed != "" {
+					fileData["proxy_url"] = trimmed
+				}
+			}
 			if wv := gjson.GetBytes(data, "websockets"); wv.Exists() {
 				switch wv.Type {
 				case gjson.True:
@@ -774,6 +779,9 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quotaSupported .
 				entry["note"] = trimmed
 			}
 		}
+	}
+	if proxyURL := strings.TrimSpace(auth.ProxyURL); proxyURL != "" {
+		entry["proxy_url"] = proxyURL
 	}
 	if weight, ok := authWeightValue(auth); ok {
 		entry[coreauth.AttributeWeight] = weight

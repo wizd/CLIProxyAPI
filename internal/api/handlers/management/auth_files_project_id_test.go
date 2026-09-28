@@ -106,6 +106,60 @@ func TestListAuthFiles_IncludesWebsocketsFromManager(t *testing.T) {
 	}
 }
 
+func TestListAuthFiles_IncludesProxyURLFromManager(t *testing.T) {
+	t.Setenv("MANAGEMENT_PASSWORD", "")
+
+	authDir := t.TempDir()
+	fileName := "codex-user@example.com-proxy.json"
+	filePath := filepath.Join(authDir, fileName)
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"codex","email":"user@example.com"}`), 0o600); errWrite != nil {
+		t.Fatalf("failed to write auth file: %v", errWrite)
+	}
+
+	manager := coreauth.NewManager(nil, nil, nil)
+	record := &coreauth.Auth{
+		ID:       fileName,
+		FileName: fileName,
+		Provider: "codex",
+		Status:   coreauth.StatusActive,
+		ProxyURL: "socks5://user:secret@127.0.0.1:1080",
+		Attributes: map[string]string{
+			"path": filePath,
+		},
+		Metadata: map[string]any{
+			"type": "codex",
+		},
+	}
+	if _, errRegister := manager.Register(context.Background(), record); errRegister != nil {
+		t.Fatalf("failed to register auth record: %v", errRegister)
+	}
+
+	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
+	h.tokenStore = &memoryAuthStore{}
+
+	entry := firstAuthFileEntry(t, h)
+	if got := entry["proxy_url"]; got != "socks5://user:secret@127.0.0.1:1080" {
+		t.Fatalf("expected proxy_url %q, got %#v", "socks5://user:secret@127.0.0.1:1080", got)
+	}
+}
+
+func TestListAuthFilesFromDisk_IncludesProxyURL(t *testing.T) {
+	t.Setenv("MANAGEMENT_PASSWORD", "")
+
+	authDir := t.TempDir()
+	filePath := filepath.Join(authDir, "codex-user@example.com-proxy.json")
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"codex","email":"user@example.com","proxy_url":" http://proxy.local:8080 "}`), 0o600); errWrite != nil {
+		t.Fatalf("failed to write auth file: %v", errWrite)
+	}
+
+	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
+
+	entry := firstAuthFileEntry(t, h)
+	if got := entry["proxy_url"]; got != "http://proxy.local:8080" {
+		t.Fatalf("expected proxy_url %q, got %#v", "http://proxy.local:8080", got)
+	}
+}
+
 func TestListAuthFilesFromDisk_IncludesWebsockets(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "")
 
