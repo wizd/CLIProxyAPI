@@ -75,6 +75,13 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 		return nil, errValidate
 	}
 	req.Payload = originalPayload
+	// Observe a translation refusal before the token refresh or any upstream call.
+	modelInfo, _ := cliproxyauth.ResolvedModelInfo(req)
+	translationReq := sdktranslator.RequestEnvelope{Format: from, Model: baseModel, Stream: true, ModelInfo: modelInfo}
+	originalTranslated, translated, errTranslate := helps.TranslateRequestEnvelopePairWithCodexMultiAgentV2(ctx, opts.Headers, e.cfg, from, to, translationReq, originalPayload, req.Payload)
+	if errTranslate != nil {
+		return nil, errTranslate
+	}
 	token, updatedAuth, errToken := e.ensureAccessToken(ctx, auth)
 	if errToken != nil {
 		return nil, errToken
@@ -82,18 +89,6 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	if updatedAuth != nil {
 		auth = updatedAuth
 		reporter.UpdateAccessTokenFingerprint(auth)
-	}
-
-	modelInfo, _ := cliproxyauth.ResolvedModelInfo(req)
-	translationReq := sdktranslator.RequestEnvelope{Format: from, Model: baseModel, Stream: true, ModelInfo: modelInfo}
-	originalTranslated, translated := helps.TranslateRequestEnvelopePairWithCodexMultiAgentV2(ctx, opts.Headers, e.cfg, from, to, translationReq, originalPayload, req.Payload)
-	var releaseVideo func()
-	translated, releaseVideo, err = helps.ResolveRemoteVideoURLs(ctx, e.cfg, translated, opts.Metadata)
-	if releaseVideo != nil {
-		defer releaseVideo()
-	}
-	if err != nil {
-		return nil, statusErr{code: http.StatusBadRequest, msg: err.Error()}
 	}
 
 	translated, err = helps.ApplyRequestThinking(translated, req, opts, from.String(), to.String(), e.Identifier())
