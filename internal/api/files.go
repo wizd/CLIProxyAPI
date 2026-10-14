@@ -76,6 +76,17 @@ func resolveFileStoreDir(cfg *config.Config, configFilePath string) string {
 	return "uploads"
 }
 
+func (s *Server) refreshLargePayloadSlots(n int64) {
+	if s == nil {
+		return
+	}
+	if s.payloadGate == nil {
+		s.payloadGate = &upload.SlotGate{}
+		upload.SetSlotGate(s.payloadGate)
+	}
+	s.payloadGate.Resize(n)
+}
+
 func (s *Server) ensureFileStore(cfg *config.Config) {
 	if s == nil || cfg == nil {
 		return
@@ -212,8 +223,4 @@ func normalizeUploadMIME(raw, filename string) string {
 		}
 	}
 	return raw
-}
-
-func isFileUploadPath(path string) bool {
-	return path == "/v1/files"
 }
