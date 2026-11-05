@@ -629,7 +629,7 @@ func TestConvertOpenAIRequestToAntigravityDropsRemoteVideoURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err = %v. Output: %s", err, out)
 	}
-	parts := gjson.GetBytes(out, "request.contents.0.parts").Array()
+	parts := ojson.GetBytes(out, "request.contents.0.parts").Array()
 	if len(parts) != 1 || parts[0].Get("text").String() != "What is this?" {
 		t.Fatalf("remote video_url should be dropped and text kept. Output: %s", out)
 	}
@@ -654,7 +654,7 @@ func TestConvertOpenAIRequestToAntigravityTranslatesAssistantVideoURL(t *testing
 	if err != nil {
 		t.Fatalf("err = %v. Output: %s", err, out)
 	}
-	contents := gjson.GetBytes(out, "request.contents").Array()
+	contents := ojson.GetBytes(out, "request.contents").Array()
 	if len(contents) < 2 {
 		t.Fatalf("contents length = %d. Output: %s", len(contents), out)
 	}

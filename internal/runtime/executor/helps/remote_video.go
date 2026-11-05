@@ -2,7 +2,6 @@ package helps
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -12,12 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MoeForge/moego/base64"
+	"github.com/MoeForge/moego/ojson"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/upload"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 )
 
 var errRemoteVideoBlocked = errors.New("remote video URL is not allowed")
@@ -32,14 +31,14 @@ var skipRemoteVideoSSRFForTest bool
 // longer needed so the large-payload slot can be returned.
 func ResolveRemoteVideoURLs(ctx context.Context, cfg *config.Config, payload []byte, metadata map[string]any) ([]byte, func(), error) {
 	noop := func() {}
-	if len(payload) == 0 || !gjson.ValidBytes(payload) {
+	if len(payload) == 0 || !ojson.ValidBytes(payload) {
 		return payload, noop, nil
 	}
 	contentsPath := "contents"
-	if gjson.GetBytes(payload, "request.contents").Exists() {
+	if ojson.GetBytes(payload, "request.contents").Exists() {
 		contentsPath = "request.contents"
 	}
-	contents := gjson.GetBytes(payload, contentsPath)
+	contents := ojson.GetBytes(payload, contentsPath)
 	if !contents.IsArray() {
 		return payload, noop, nil
 	}
@@ -60,12 +59,12 @@ func ResolveRemoteVideoURLs(ctx context.Context, cfg *config.Config, payload []b
 		metaRaw string
 	}
 	var pending []replacement
-	contents.ForEach(func(ci, content gjson.Result) bool {
+	contents.ForEach(func(ci, content ojson.Result) bool {
 		parts := content.Get("parts")
 		if !parts.IsArray() {
 			return true
 		}
-		parts.ForEach(func(pi, part gjson.Result) bool {
+		parts.ForEach(func(pi, part ojson.Result) bool {
 			uri, mime, ok := geminiFileDataRef(part)
 			if !ok {
 				return true
@@ -151,7 +150,7 @@ func ResolveRemoteVideoURLs(ctx context.Context, cfg *config.Config, payload []b
 			part = translatorcommon.AttachVideoMetadata(part, []byte(item.metaRaw))
 		}
 		var errSet error
-		payload, errSet = sjson.SetRawBytes(payload, item.path, part)
+		payload, errSet = ojson.SetRawBytes(payload, item.path, part)
 		if errSet != nil {
 			release()
 			return payload, noop, errSet
@@ -178,7 +177,7 @@ func inlineGatewayFile(store *upload.Store, callerScope, fileID, fallbackMIME st
 	return base64.StdEncoding.EncodeToString(data), mime, nil
 }
 
-func geminiFileDataRef(part gjson.Result) (uri, mime string, ok bool) {
+func geminiFileDataRef(part ojson.Result) (uri, mime string, ok bool) {
 	node := part.Get("fileData")
 	if !node.Exists() {
 		node = part.Get("file_data")

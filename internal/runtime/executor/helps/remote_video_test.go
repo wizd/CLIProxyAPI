@@ -2,16 +2,16 @@ package helps
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/MoeForge/moego/base64"
+	"github.com/MoeForge/moego/ojson"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/upload"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/tidwall/gjson"
 )
 
 func TestResolveRemoteVideoURLsLeavesYouTube(t *testing.T) {
@@ -23,7 +23,7 @@ func TestResolveRemoteVideoURLsLeavesYouTube(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := gjson.GetBytes(out, "request.contents.0.parts.0.fileData.fileUri").String(); !strings.Contains(got, "youtube.com") {
+	if got := ojson.GetBytes(out, "request.contents.0.parts.0.fileData.fileUri").String(); !strings.Contains(got, "youtube.com") {
 		t.Fatalf("YouTube URI changed: %s", out)
 	}
 }
@@ -57,13 +57,13 @@ func TestResolveRemoteVideoURLsFetchesWhenEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.inlineData.mimeType").String(); got != "video/webm" {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.inlineData.mimeType").String(); got != "video/webm" {
 		t.Fatalf("mimeType = %q. out=%s", got, out)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.inlineData.data").String(); got != base64.StdEncoding.EncodeToString([]byte("webm-bytes")) {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.inlineData.data").String(); got != base64.StdEncoding.EncodeToString([]byte("webm-bytes")) {
 		t.Fatalf("data = %q", got)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.videoMetadata.fps").Int(); got != 1 {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.videoMetadata.fps").Int(); got != 1 {
 		t.Fatalf("metadata lost: %s", out)
 	}
 }
@@ -104,13 +104,13 @@ func TestResolveRemoteVideoURLsExpandsGatewayFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.inlineData.mimeType").String(); got != "video/webm" {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.inlineData.mimeType").String(); got != "video/webm" {
 		t.Fatalf("mimeType = %q out=%s", got, out)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.inlineData.data").String(); got != base64.StdEncoding.EncodeToString([]byte("clip-bytes")) {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.inlineData.data").String(); got != base64.StdEncoding.EncodeToString([]byte("clip-bytes")) {
 		t.Fatalf("data = %q", got)
 	}
-	if got := gjson.GetBytes(out, "contents.0.parts.0.videoMetadata.fps").Int(); got != 2 {
+	if got := ojson.GetBytes(out, "contents.0.parts.0.videoMetadata.fps").Int(); got != 2 {
 		t.Fatalf("metadata lost: %s", out)
 	}
 }

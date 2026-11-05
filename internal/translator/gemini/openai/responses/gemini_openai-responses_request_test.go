@@ -3394,7 +3394,7 @@ func TestConvertOpenAIResponsesRequestToGeminiPreservesYouTubeInputVideo(t *test
 	if err != nil {
 		t.Fatalf("err = %v. output=%s", err, output)
 	}
-	if got := gjson.GetBytes(output, "contents.0.parts.0.file_data.file_uri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
+	if got := ojson.GetBytes(output, "contents.0.parts.0.file_data.file_uri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
 		t.Fatalf("file_uri = %q. output=%s", got, output)
 	}
 }

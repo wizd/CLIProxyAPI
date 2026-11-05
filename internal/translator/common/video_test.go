@@ -3,7 +3,7 @@ package common
 import (
 	"testing"
 
-	"github.com/tidwall/gjson"
+	"github.com/MoeForge/moego/ojson"
 )
 
 func TestParseDataURL(t *testing.T) {
@@ -32,47 +32,47 @@ func TestIsYouTubeURL(t *testing.T) {
 }
 
 func TestVideoPartFromOpenAIItemDataURL(t *testing.T) {
-	item := gjson.Parse(`{"type":"video_url","video_url":{"url":"data:video/mp4;base64,AAAAIGZ0eXBtcDQy"}}`)
+	item := ojson.Parse(`{"type":"video_url","video_url":{"url":"data:video/mp4;base64,AAAAIGZ0eXBtcDQy"}}`)
 	part := VideoPartFromOpenAIItem(item, VideoPartGeminiSnake)
-	if got := gjson.GetBytes(part, "inlineData.mime_type").String(); got != "video/mp4" {
+	if got := ojson.GetBytes(part, "inlineData.mime_type").String(); got != "video/mp4" {
 		t.Fatalf("mime = %q", got)
 	}
-	if got := gjson.GetBytes(part, "inlineData.data").String(); got != "AAAAIGZ0eXBtcDQy" {
+	if got := ojson.GetBytes(part, "inlineData.data").String(); got != "AAAAIGZ0eXBtcDQy" {
 		t.Fatalf("data = %q", got)
 	}
 }
 
 func TestVideoPartFromOpenAIItemYouTube(t *testing.T) {
-	item := gjson.Parse(`{"type":"video_url","video_url":{"url":"https://www.youtube.com/watch?v=jNQXAC9IVRw","start_offset":5,"end_offset":"15s","fps":1}}`)
+	item := ojson.Parse(`{"type":"video_url","video_url":{"url":"https://www.youtube.com/watch?v=jNQXAC9IVRw","start_offset":5,"end_offset":"15s","fps":1}}`)
 	part := VideoPartFromOpenAIItem(item, VideoPartGeminiCamel)
-	if got := gjson.GetBytes(part, "fileData.fileUri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
+	if got := ojson.GetBytes(part, "fileData.fileUri").String(); got != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
 		t.Fatalf("fileUri = %q", got)
 	}
-	if got := gjson.GetBytes(part, "videoMetadata.startOffset.seconds").Int(); got != 5 {
+	if got := ojson.GetBytes(part, "videoMetadata.startOffset.seconds").Int(); got != 5 {
 		t.Fatalf("startOffset = %d", got)
 	}
-	if got := gjson.GetBytes(part, "videoMetadata.endOffset.seconds").Int(); got != 15 {
+	if got := ojson.GetBytes(part, "videoMetadata.endOffset.seconds").Int(); got != 15 {
 		t.Fatalf("endOffset = %d", got)
 	}
-	if got := gjson.GetBytes(part, "videoMetadata.fps").Float(); got != 1 {
+	if got := ojson.GetBytes(part, "videoMetadata.fps").Float(); got != 1 {
 		t.Fatalf("fps = %v", got)
 	}
 }
 
 func TestVideoPartFromOpenAIItemFileID(t *testing.T) {
-	item := gjson.Parse(`{"type":"video_url","file_id":"file-0123456789abcdef","video_metadata":{"fps":1}}`)
+	item := ojson.Parse(`{"type":"video_url","file_id":"file-0123456789abcdef","video_metadata":{"fps":1}}`)
 	part := VideoPartFromOpenAIItem(item, VideoPartGeminiCamel)
-	if got := gjson.GetBytes(part, "fileData.fileUri").String(); got != "gwfile://file-0123456789abcdef" {
+	if got := ojson.GetBytes(part, "fileData.fileUri").String(); got != "gwfile://file-0123456789abcdef" {
 		t.Fatalf("fileUri = %q part=%s", got, part)
 	}
-	if got := gjson.GetBytes(part, "videoMetadata.fps").Int(); got != 1 {
-		t.Fatalf("fps = %v", gjson.GetBytes(part, "videoMetadata").Raw)
+	if got := ojson.GetBytes(part, "videoMetadata.fps").Int(); got != 1 {
+		t.Fatalf("fps = %v", ojson.GetBytes(part, "videoMetadata").Raw)
 	}
 }
 
 func TestVideoPartFromURLGatewayFile(t *testing.T) {
 	part := VideoPartFromURL("gwfile://file-abc12345", VideoPartResponses)
-	if got := gjson.GetBytes(part, "file_data.file_uri").String(); got != "gwfile://file-abc12345" {
+	if got := ojson.GetBytes(part, "file_data.file_uri").String(); got != "gwfile://file-abc12345" {
 		t.Fatalf("file_uri = %q", got)
 	}
 }
@@ -88,9 +88,9 @@ func TestGatewayFileID(t *testing.T) {
 }
 
 func TestVideoPartFromOpenAIItemResponsesYouTube(t *testing.T) {
-	item := gjson.Parse(`{"type":"input_video","video_url":"https://youtu.be/jNQXAC9IVRw"}`)
+	item := ojson.Parse(`{"type":"input_video","video_url":"https://youtu.be/jNQXAC9IVRw"}`)
 	part := VideoPartFromOpenAIItem(item, VideoPartResponses)
-	if got := gjson.GetBytes(part, "file_data.file_uri").String(); got != "https://youtu.be/jNQXAC9IVRw" {
+	if got := ojson.GetBytes(part, "file_data.file_uri").String(); got != "https://youtu.be/jNQXAC9IVRw" {
 		t.Fatalf("file_uri = %q, part=%s", got, part)
 	}
 }

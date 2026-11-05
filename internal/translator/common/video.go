@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MoeForge/moego/ojson"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/misc"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 )
 
 // VideoPartKind selects the Gemini JSON field naming used by a translator.
@@ -112,14 +111,14 @@ func GatewayFileID(raw string) (string, bool) {
 }
 
 // OpenAIVideoURL extracts a video URL from an OpenAI content part.
-func OpenAIVideoURL(item gjson.Result) string {
+func OpenAIVideoURL(item ojson.Result) string {
 	if fileID := firstFileID(item); fileID != "" {
 		return GatewayFileURI(fileID)
 	}
 	if url := strings.TrimSpace(item.Get("video_url.url").String()); url != "" {
 		return url
 	}
-	if videoURL := item.Get("video_url"); videoURL.Type == gjson.String {
+	if videoURL := item.Get("video_url"); videoURL.Type == ojson.String {
 		if url := strings.TrimSpace(videoURL.String()); url != "" {
 			return url
 		}
@@ -130,7 +129,7 @@ func OpenAIVideoURL(item gjson.Result) string {
 	return ""
 }
 
-func firstFileID(item gjson.Result) string {
+func firstFileID(item ojson.Result) string {
 	for _, pathName := range []string{"file_id", "video_url.file_id", "fileId"} {
 		if id := strings.TrimSpace(item.Get(pathName).String()); id != "" {
 			if IsGatewayFileURI(id) {
@@ -147,7 +146,7 @@ func firstFileID(item gjson.Result) string {
 
 // VideoPartFromOpenAIItem converts an OpenAI video part into a Gemini part.
 // Data URLs become inlineData; YouTube and other http(s) URLs become fileData.
-func VideoPartFromOpenAIItem(item gjson.Result, kind VideoPartKind) []byte {
+func VideoPartFromOpenAIItem(item ojson.Result, kind VideoPartKind) []byte {
 	videoURL := OpenAIVideoURL(item)
 	part := VideoPartFromURL(videoURL, kind)
 	if len(part) == 0 {
@@ -180,18 +179,18 @@ func GeminiInlineDataPart(mimeType, data string, kind VideoPartKind) []byte {
 	switch kind {
 	case VideoPartResponses:
 		part := []byte(`{"inline_data":{"mime_type":"","data":""}}`)
-		part, _ = sjson.SetBytes(part, "inline_data.mime_type", mimeType)
-		part, _ = sjson.SetBytes(part, "inline_data.data", data)
+		part, _ = ojson.SetBytes(part, "inline_data.mime_type", mimeType)
+		part, _ = ojson.SetBytes(part, "inline_data.data", data)
 		return part
 	case VideoPartGeminiCamel:
 		part := []byte(`{"inlineData":{"mimeType":"","data":""}}`)
-		part, _ = sjson.SetBytes(part, "inlineData.mimeType", mimeType)
-		part, _ = sjson.SetBytes(part, "inlineData.data", data)
+		part, _ = ojson.SetBytes(part, "inlineData.mimeType", mimeType)
+		part, _ = ojson.SetBytes(part, "inlineData.data", data)
 		return part
 	default:
 		part := []byte(`{"inlineData":{"mime_type":"","data":""}}`)
-		part, _ = sjson.SetBytes(part, "inlineData.mime_type", mimeType)
-		part, _ = sjson.SetBytes(part, "inlineData.data", data)
+		part, _ = ojson.SetBytes(part, "inlineData.mime_type", mimeType)
+		part, _ = ojson.SetBytes(part, "inlineData.data", data)
 		return part
 	}
 }
@@ -204,24 +203,24 @@ func GeminiFileDataPart(fileURI, mimeType string, kind VideoPartKind) []byte {
 	switch kind {
 	case VideoPartResponses:
 		part := []byte(`{"file_data":{"mime_type":"","file_uri":""}}`)
-		part, _ = sjson.SetBytes(part, "file_data.mime_type", mimeType)
-		part, _ = sjson.SetBytes(part, "file_data.file_uri", fileURI)
+		part, _ = ojson.SetBytes(part, "file_data.mime_type", mimeType)
+		part, _ = ojson.SetBytes(part, "file_data.file_uri", fileURI)
 		return part
 	case VideoPartGeminiCamel:
 		part := []byte(`{"fileData":{"mimeType":"","fileUri":""}}`)
-		part, _ = sjson.SetBytes(part, "fileData.mimeType", mimeType)
-		part, _ = sjson.SetBytes(part, "fileData.fileUri", fileURI)
+		part, _ = ojson.SetBytes(part, "fileData.mimeType", mimeType)
+		part, _ = ojson.SetBytes(part, "fileData.fileUri", fileURI)
 		return part
 	default:
 		part := []byte(`{"fileData":{"mime_type":"","file_uri":""}}`)
-		part, _ = sjson.SetBytes(part, "fileData.mime_type", mimeType)
-		part, _ = sjson.SetBytes(part, "fileData.file_uri", fileURI)
+		part, _ = ojson.SetBytes(part, "fileData.mime_type", mimeType)
+		part, _ = ojson.SetBytes(part, "fileData.file_uri", fileURI)
 		return part
 	}
 }
 
 // VideoMetadataFromItem extracts Gemini videoMetadata from an OpenAI part.
-func VideoMetadataFromItem(item gjson.Result) []byte {
+func VideoMetadataFromItem(item ojson.Result) []byte {
 	if raw := firstExistingObject(item, "video_metadata", "videoMetadata"); raw != "" {
 		return normalizeVideoMetadata([]byte(raw))
 	}
@@ -236,14 +235,14 @@ func VideoMetadataFromItem(item gjson.Result) []byte {
 
 // AttachVideoMetadata merges videoMetadata onto a Gemini part when present.
 func AttachVideoMetadata(part, metadata []byte) []byte {
-	if len(part) == 0 || len(metadata) == 0 || !gjson.ValidBytes(metadata) {
+	if len(part) == 0 || len(metadata) == 0 || !ojson.ValidBytes(metadata) {
 		return part
 	}
-	part, _ = sjson.SetRawBytes(part, "videoMetadata", metadata)
+	part, _ = ojson.SetRawBytes(part, "videoMetadata", metadata)
 	return part
 }
 
-func firstExistingObject(item gjson.Result, paths ...string) string {
+func firstExistingObject(item ojson.Result, paths ...string) string {
 	for _, pathName := range paths {
 		value := item.Get(pathName)
 		if value.Exists() && value.IsObject() {
@@ -253,7 +252,7 @@ func firstExistingObject(item gjson.Result, paths ...string) string {
 	return ""
 }
 
-func videoMetadataFromOffsets(item gjson.Result) []byte {
+func videoMetadataFromOffsets(item ojson.Result) []byte {
 	start := firstOffset(item, "start_offset", "startOffset")
 	end := firstOffset(item, "end_offset", "endOffset")
 	fps := firstFPS(item)
@@ -262,18 +261,18 @@ func videoMetadataFromOffsets(item gjson.Result) []byte {
 	}
 	out := []byte(`{}`)
 	if start != "" {
-		out, _ = sjson.SetRawBytes(out, "startOffset", []byte(start))
+		out, _ = ojson.SetRawBytes(out, "startOffset", []byte(start))
 	}
 	if end != "" {
-		out, _ = sjson.SetRawBytes(out, "endOffset", []byte(end))
+		out, _ = ojson.SetRawBytes(out, "endOffset", []byte(end))
 	}
 	if fps != "" {
-		out, _ = sjson.SetRawBytes(out, "fps", []byte(fps))
+		out, _ = ojson.SetRawBytes(out, "fps", []byte(fps))
 	}
 	return out
 }
 
-func firstOffset(item gjson.Result, paths ...string) string {
+func firstOffset(item ojson.Result, paths ...string) string {
 	for _, pathName := range paths {
 		value := item.Get(pathName)
 		if !value.Exists() {
@@ -286,21 +285,21 @@ func firstOffset(item gjson.Result, paths ...string) string {
 	return ""
 }
 
-func encodeOffset(value gjson.Result) string {
+func encodeOffset(value ojson.Result) string {
 	if value.IsObject() {
 		return value.Raw
 	}
 	switch value.Type {
-	case gjson.Number:
+	case ojson.Number:
 		seconds := int64(value.Num)
 		nanos := int64((value.Num - float64(seconds)) * 1e9)
 		out := []byte(`{"seconds":0}`)
-		out, _ = sjson.SetBytes(out, "seconds", seconds)
+		out, _ = ojson.SetBytes(out, "seconds", seconds)
 		if nanos != 0 {
-			out, _ = sjson.SetBytes(out, "nanos", nanos)
+			out, _ = ojson.SetBytes(out, "nanos", nanos)
 		}
 		return string(out)
-	case gjson.String:
+	case ojson.String:
 		seconds, ok := parseDurationSeconds(value.String())
 		if !ok {
 			return ""
@@ -308,9 +307,9 @@ func encodeOffset(value gjson.Result) string {
 		out := []byte(`{"seconds":0}`)
 		whole := int64(seconds)
 		nanos := int64((seconds - float64(whole)) * 1e9)
-		out, _ = sjson.SetBytes(out, "seconds", whole)
+		out, _ = ojson.SetBytes(out, "seconds", whole)
 		if nanos != 0 {
-			out, _ = sjson.SetBytes(out, "nanos", nanos)
+			out, _ = ojson.SetBytes(out, "nanos", nanos)
 		}
 		return string(out)
 	default:
@@ -318,16 +317,16 @@ func encodeOffset(value gjson.Result) string {
 	}
 }
 
-func firstFPS(item gjson.Result) string {
+func firstFPS(item ojson.Result) string {
 	for _, pathName := range []string{"fps", "frame_rate"} {
 		value := item.Get(pathName)
 		if !value.Exists() {
 			continue
 		}
 		switch value.Type {
-		case gjson.Number:
+		case ojson.Number:
 			return value.Raw
-		case gjson.String:
+		case ojson.String:
 			if trimmed := strings.TrimSpace(value.String()); trimmed != "" {
 				if _, err := strconv.ParseFloat(trimmed, 64); err == nil {
 					return trimmed
@@ -352,36 +351,36 @@ func parseDurationSeconds(raw string) (float64, bool) {
 }
 
 func normalizeVideoMetadata(raw []byte) []byte {
-	if !gjson.ValidBytes(raw) {
+	if !ojson.ValidBytes(raw) {
 		return nil
 	}
 	out := []byte(`{}`)
 	wrote := false
-	if start := encodeOffset(gjson.GetBytes(raw, "startOffset")); start == "" {
-		start = encodeOffset(gjson.GetBytes(raw, "start_offset"))
+	if start := encodeOffset(ojson.GetBytes(raw, "startOffset")); start == "" {
+		start = encodeOffset(ojson.GetBytes(raw, "start_offset"))
 		if start != "" {
-			out, _ = sjson.SetRawBytes(out, "startOffset", []byte(start))
+			out, _ = ojson.SetRawBytes(out, "startOffset", []byte(start))
 			wrote = true
 		}
 	} else {
-		out, _ = sjson.SetRawBytes(out, "startOffset", []byte(start))
+		out, _ = ojson.SetRawBytes(out, "startOffset", []byte(start))
 		wrote = true
 	}
-	if end := encodeOffset(gjson.GetBytes(raw, "endOffset")); end == "" {
-		end = encodeOffset(gjson.GetBytes(raw, "end_offset"))
+	if end := encodeOffset(ojson.GetBytes(raw, "endOffset")); end == "" {
+		end = encodeOffset(ojson.GetBytes(raw, "end_offset"))
 		if end != "" {
-			out, _ = sjson.SetRawBytes(out, "endOffset", []byte(end))
+			out, _ = ojson.SetRawBytes(out, "endOffset", []byte(end))
 			wrote = true
 		}
 	} else {
-		out, _ = sjson.SetRawBytes(out, "endOffset", []byte(end))
+		out, _ = ojson.SetRawBytes(out, "endOffset", []byte(end))
 		wrote = true
 	}
-	if fps := gjson.GetBytes(raw, "fps"); fps.Exists() {
-		out, _ = sjson.SetRawBytes(out, "fps", []byte(fps.Raw))
+	if fps := ojson.GetBytes(raw, "fps"); fps.Exists() {
+		out, _ = ojson.SetRawBytes(out, "fps", []byte(fps.Raw))
 		wrote = true
-	} else if fps := gjson.GetBytes(raw, "frame_rate"); fps.Exists() {
-		out, _ = sjson.SetRawBytes(out, "fps", []byte(fps.Raw))
+	} else if fps := ojson.GetBytes(raw, "frame_rate"); fps.Exists() {
+		out, _ = ojson.SetRawBytes(out, "fps", []byte(fps.Raw))
 		wrote = true
 	}
 	if !wrote {

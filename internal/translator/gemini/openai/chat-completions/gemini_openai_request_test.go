@@ -113,12 +113,12 @@ func TestConvertOpenAIRequestToGeminiDropsRemoteVideoURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err = %v. Output: %s", err, result)
 	}
-	parts := gjson.ParseBytes(result).Get("contents.0.parts").Array()
+	parts := ojson.ParseBytes(result).Get("contents.0.parts").Array()
 	if len(parts) != 1 || parts[0].Get("text").String() != "Describe the video" {
-		t.Fatalf("remote video_url should be dropped and text kept. parts=%s", gjson.GetBytes(result, "contents.0.parts").Raw)
+		t.Fatalf("remote video_url should be dropped and text kept. parts=%s", ojson.GetBytes(result, "contents.0.parts").Raw)
 	}
 	if parts[0].Get("fileData").Exists() || parts[0].Get("inlineData").Exists() {
-		t.Fatalf("remote video_url was inlined. parts=%s", gjson.GetBytes(result, "contents.0.parts").Raw)
+		t.Fatalf("remote video_url was inlined. parts=%s", ojson.GetBytes(result, "contents.0.parts").Raw)
 	}
 }
 
@@ -139,7 +139,7 @@ func TestConvertOpenAIRequestToGeminiPreservesAssistantVideoURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err = %v. Output: %s", err, result)
 	}
-	contents := gjson.ParseBytes(result).Get("contents").Array()
+	contents := ojson.ParseBytes(result).Get("contents").Array()
 	if len(contents) < 2 {
 		t.Fatalf("contents length = %d, want at least 2. raw=%s", len(contents), result)
 	}
